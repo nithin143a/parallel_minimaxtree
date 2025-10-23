@@ -1,5 +1,14 @@
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
+def minimax_child_wrapper(args):
+    board, alpha, i = args
+    from copy import deepcopy
+    b = deepcopy(board)
+    b[i] = 'X'
+    from minimax_logic import minimax  # import inside if necessary
+    val = minimax(b, 0, alpha, float('inf'), False)
+    return val, i
+
 
 def winner(board):
     # Check winning combinations or draw
@@ -60,13 +69,28 @@ def parallel_best_move(board):
     if not moves:
         return -1
 
-    # Evaluate first move to apply alpha-beta pruning "Young Brother Wait"
+    # Evaluate first move to get alpha
     first = moves[0]
     board[first] = 'X'
     best_val = minimax(board, 0, -float('inf'), float('inf'), False)
     board[first] = ' '
     best_move = first
     alpha = best_val
+
+    # Prepare arguments for each worker
+    args = [(board, alpha, i) for i in moves[1:]]
+
+    # Use the wrapper
+    with ProcessPoolExecutor() as executor:
+        results = list(executor.map(minimax_child_wrapper, args))
+
+    # Find best move from results
+    for val, idx in results:
+        if val > best_val:
+            best_val = val
+            best_move = idx
+    return best_move
+
 
     # Evaluate other moves in parallel
     with ProcessPoolExecutor() as executor:
