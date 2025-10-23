@@ -1,8 +1,2 @@
-streamlit_minimax_project/
-│
-├── app.py                ← main Streamlit web app
-├── minimax_logic.py      ← contains all Minimax and game logic
-├── requirements.txt      ← libraries to install
-└── __init__.py           ← (empty file, optional for imports)
 streamlit
 numpy
