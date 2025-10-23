@@ -55,12 +55,31 @@ def minimax_child(board, i, alpha):
     val = minimax(b, 0, alpha, float('inf'), False)
     return val, i
 
+def with ProcessPoolExecutor() as executor:
+    results = list(executor.map(lambda i: minimax_child(board, i, alpha), moves[1:]))
+    # Helper global variable to pass board and alpha
+_global_board = None
+_global_alpha = None
+
+def _init_globals(board, alpha):
+    global _global_board, _global_alpha
+    _global_board = board
+    _global_alpha = alpha
+
+def _worker(i):
+    from copy import deepcopy
+    b = deepcopy(_global_board)
+    b[i] = 'X'
+    from minimax_logic import minimax  # Import here for safety in subprocess
+    val = minimax(b, 0, _global_alpha, float('inf'), False)
+    return val, i
+
 def parallel_best_move(board):
     moves = [i for i in range(9) if board[i] == ' ']
     if not moves:
         return -1
 
-    # Evaluate first move sequentially
+    # Evaluate first move to setup alpha
     first = moves[0]
     board[first] = 'X'
     best_val = minimax(board, 0, -float('inf'), float('inf'), False)
@@ -68,9 +87,8 @@ def parallel_best_move(board):
     best_move = first
     alpha = best_val
 
-    # Evaluate remaining moves in parallel
-    with ProcessPoolExecutor() as executor:
-        results = list(executor.map(lambda i: minimax_child(board, i, alpha), moves[1:]))
+    with ProcessPoolExecutor(initializer=_init_globals, initargs=(board, alpha)) as executor:
+        results = list(executor.map(_worker, moves[1:]))
 
     for val, idx in results:
         if val > best_val:
